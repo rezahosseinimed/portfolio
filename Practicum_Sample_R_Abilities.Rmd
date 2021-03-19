@@ -1,0 +1,1039 @@
+---
+title: "<span style='font-size: 25px'>An example of my R coding abilities</style>"
+author:
+date:
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document: default
+---
+
+**March 18, 2021**  
+\
+
+**Author**:  
+
+Reza Hosseini  
+MD, MPH Student (Class of 2022)  
+School of Population and Public Health, Faculty of Medicine,   
+University of British Columbia
+
+
+
+***
+#### 1. Introduction  
+
+This report is an example illustration of different topics in R that I am familiar 
+with and have worked on over the past months. In my previous R markdown file 
+published on RPubs titled "[Public health harm and economic damage caused by 
+different storm events based on NOAA data](https://rpubs.com/RzHosseini/a)", I 
+presented examples of me working with these packages and functions:  
+  
+* **`dplyr` package** to tidy and manipulate data frames (in the form of tibbles) 
+using its four main functions (`select()`, `filter()`, `mutate()`, and 
+`summarise()` ). I also used the pipe operator (`%>%`) to simplify the flow of 
+my code,  
+* **`ggplot2` package** to produce graphs based on the grammar of graphics 
+concepts. The `dplyr` and `ggplot2` packages are a part of the `tidyverse`, 
+a collection of open source R packages introduced by Hadley Wickham, the chief 
+data scientist at RStudio.
+* **`lubridate` package** to work with date and time easily in R,  
+* **`kableExtra` package** to easily present a table in an R markdown file.  
+* **`sapply()` function** one of the functions from the `apply` family, which 
+are basically shorthands for loops in R.
+
+In this report, I am presenting some of my other R knowledge. I have divided 
+this file into several sections, so please feel free to use the navigation menu 
+on the left to quickly look at the part you are most interested in.  
+
+***
+
+#### 2. Graphical systems  
+
+There are three main graphical systems in R, and each one has its own pros and 
+cons:
+
+* **Base R Plotting System**  
+  + starts with a plot function,  
+  + then annotations (texts, lines, etc.) can be added separately  
+  + Its problem is it does not automatically manage plot margins, spacing, etc.  
+
+* **Lattice Plotting System**:  
+  + very powerful in producing panel plots,  
+  + all plotting and annotation is done with a single function call  
+  + automatically manages margins, spacing, etc.  
+  + Its problem is it is hard to annotate, awkward to specify entire plot in 
+  one function call  
+  
+* **GGplot2 Plotting System**  
+  + implements the Grammar of Graphics by Leland Wilkinson. “In brief, the 
+  grammar tells us that a statistical graphic is a mapping from data to 
+  aesthetic attributes (color, shape, size) of geometric objects (points, 
+  lines, bars). The plot may also contain statistical transformations of 
+  the data and is drawn on a speciﬁc coordinate system”.
+  + is mostly a combination of advantages of the other two systems  
+  + step-wise annotation using separate function calls is possible  
+  + automatically manages margins, spacing, etc. 
+  + relatively easy to make panel plots
+  + very customizable  
+  + there are many complementary packages for it, such as `GGally`, etc.  
+
+\
+Below, I present examples of each plotting system:
+
+##### 2.1 Base R  
+
+I first use an `if` function to download and unzip the data file [2 Kb], only 
+if the file does not exist before:  
+
+```{r}
+if(!file.exists("DataFiles/SalaryData.txt")){
+    fileURL <- "https://raw.githubusercontent.com/rezahosseinimed/portfolio/main/SalaryData.txt"
+    download.file(fileURL, destfile = "DataFiles/SalaryData.txt", method = "curl")
+}
+
+salary <- read.table(file="DataFiles/SalaryData.txt", header=T, sep="\t")
+```
+
+
+I will use this data set in the `GGplot` section below, as well.  
+\
+
+In this part, I examine salary discrimination amongst tenure-track professors 
+in a small Mid-western college in the United States. The data consists of 
+information on 52 faculty members, and were initially collected for presentation 
+in legal proceedings for which discrimination against women in salary was an 
+issue (recorded some time prior to 1980). The data were collected from personnel 
+files, and consist of the following variables. The data is saved in the file 
+`SalaryData.txt`.
+
+* `sex` = recorded as “male” and “female”  
+* `degree` = the highest degree obtained, recorded as “doctorate” and “masters”  
+* `yearsdeg` = the number of years since the degree was earned  
+* `salary` = academic salary in U.S. dollars  
+* `rank` = academic rank, recorded as “full”, “associate” and “assistant”  
+
+The structure of the data set:  
+
+```{r}
+str(salary)
+```
+
+
+After checking confounding, effect modification, etc., my fitted linear model 
+is:
+
+```{r}
+model1 <- lm(salary ~ sex + degree + yearsdeg, data = salary)
+
+cbind(Coefficients = coef(model1), confint(model1))
+```
+
+Now, I plot this model's diagnostic plots using base R plotting system:  
+\
+
+First, I save the default plotting parameters so that I can reset them later, 
+if needed.
+
+```{r}
+defaultPar <- par()
+```
+
+Then, the graph:
+
+```{r, fig.height=7}
+par(mfrow=c(2, 2), oma=c(3, 0, 0, 0), mar=c(5, 4.5, 4, 2))
+plot(model1, which = 1, caption = "", main="Residuals vs Fitted",
+     cex.main=1.1, cex.sub=1.1, cex.axis=1, cex.lab=1.1, pch=19, )
+plot(model1, which = 2, caption = "", main="Normal Q-Q",
+     cex.main=1.1, cex.sub=1.1, cex.axis=1, cex.lab=1.1, pch=19, )
+plot(model1, which = 3, caption = "", main="Scale-Location",
+     cex.main=1.1, cex.sub=1.1, cex.axis=1, cex.lab=1.1, pch=19, )
+plot(model1, which = 5, caption = "", main="Residuals vs Leverage",
+     cex.main=1.1, cex.sub=1.1, cex.axis=1, cex.lab=1.1, pch=19, )
+mtext("lm(salary ~ sex + yearsdeg + degree)", outer=TRUE,  cex=1.1,
+      line=1, side=1)
+```
+
+Resetting the plot prameters back to default:  
+
+```{r, message=FALSE, warning=FALSE}
+par(defaultPar)
+```
+
+
+\
+
+##### 2.2 Lattice  
+
+For creating a lattice plot, I use the National Emissions Inventory (NEI) 
+database, which is released by the United States' Environmental Protection 
+Agency (EPA) every three years and reports on emissions of fine particulate 
+matter (PM2.5).  
+For each year and for each type of PM source, the NEI records how many tons 
+of PM2.5 were emitted from that source over the course of the entire year. 
+The data that I use here are for 1999, 2002, 2005, and 2008.  
+
+*Disclaimer:* the description of the data set is taken from the Coursera website. 
+
+I want to compare emissions from motor vehicle sources in Baltimore City, 
+Maryland (fips == "24510") with emissions from motor vehicle sources in 
+Los Angeles County, California (fips == "06037"), and see which city has 
+seen greater changes over time in motor vehicle emissions.
+
+Downloading and unzipping the data file [29 Mb]:  
+
+```{r}
+if(!file.exists("DataFiles/DataNEI.zip")){
+    fileURL <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
+    download.file(fileURL, destfile = "DataFiles/DataNEI.zip", method = "curl")
+    unzip("DataFiles/DataNEI.zip", exdir = "DataFiles/")
+}
+```
+
+The zip file contains two files: 
+  
+* **PM2.5 Emissions Data (summarySCC_PM25.rds):** This file contains a data frame 
+with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. For 
+each year, the table contains number of tons of PM2.5 emitted from a specific 
+type of source for the entire year. The file contains these variables:  
+
+  + *fips:* A five-digit number (represented as a string) indicating 
+the U.S. county  
+  + *SCC:* The name of the source as indicated by a digit string (see source 
+code classification table)  
+  + *Pollutant:* A string indicating the pollutant  
+  + *Emissions:* Amount of PM2.5 emitted, in tons  
+  + *type:* The type of source (point, non-point, on-road, or non-road)  
+  + *year:* The year of emissions recorded  
+  
+* **Source Classification Code Table (Source_Classification_Code.rds):** This 
+table provides a mapping from the SCC digit strings in the Emissions table 
+to the actual name of the PM2.5 source.  
+
+Reading in the data:  
+
+```{r, cache=TRUE}
+NEI <- readRDS("DataFiles/summarySCC_PM25.rds")
+SCC <- readRDS("DataFiles/Source_Classification_Code.rds")
+```
+
+As we only want "motor vehicle sources", I tried different keywords
+in the SCC data set to find the most relevant matches. I think the words
+"highway veh" and "motorcycle" in the "Short.Name" column, and the word
+"vehicle" in the "EI.Sector" column are the best matches. It turned out that
+both columns have matches that are not present in the other one. As a result,
+I use the union() function to take unique matches from both columns:
+
+This code chunk automatically detects if the `dplyr` package is not installed. 
+Then it will install and load it:  
+
+```{r, message=FALSE, warning=FALSE}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+```
+
+First, searching the "Short.Name" column for matches using `grep()` function 
+and regular expressions:  
+
+```{r}
+motor_indx1 <- grep("(highway veh)|(motorcycle)", unique(SCC$Short.Name),
+                    value = TRUE, ignore.case = TRUE)
+motor1 <- filter(SCC, Short.Name %in% motor_indx1)
+```
+
+Then, searching the "EI.Sector" column for matches:  
+
+```{r}
+motor_indx2 <- grep("vehicle", unique(SCC$EI.Sector), value = TRUE,
+                    ignore.case = TRUE)
+motor2 <- filter(SCC, EI.Sector %in% motor_indx2)
+```
+
+Finally, I take the `union()` of unique values from both columns:  
+
+```{r}
+SCC_indx <- union(unique(motor1$SCC), unique(motor2$SCC))
+```
+
+Calculating emissions from motor vehicles in Baltimore and LA:
+
+```{r, message=FALSE, warning=FALSE}
+total_motor <- filter(NEI, fips %in% c("24510", "06037") & SCC %in% SCC_indx) %>%
+                group_by(fips, year) %>%
+                  summarise(totalPM = sum(Emissions))
+
+total_motor$fips <- sub("24510", "Baltimore", total_motor$fips)
+total_motor$fips <- sub("06037", "Los Angeles", total_motor$fips)
+```
+
+
+Loading the `lattice` package:  
+
+```{r, message=FALSE, warning=FALSE}
+if (!require(lattice)) {
+  install.packages("lattice")
+  library(lattice)
+}
+```
+
+Now, the lattice panel plot:
+
+```{r}
+xyplot(totalPM ~ factor(year) | fips,
+       data = total_motor,
+       main = list(expression("Changes of"~PM[2.5]~"emissions from motor vehicle"
+                         ~"sources in Baltimore compared to Los Angeles"),
+                   cex = 1),
+       xlab = list("Year", cex = 1),
+       ylab = list(expression(PM[2.5]~emitted~(underline("in tons"))),
+                   cex = 1),
+       scales = list(cex = 1),  # Increasing axes sizes
+       par.strip.text = list(cex = 1),  # Increasing strip text size
+       par.settings = list(strip.background=list(col="thistle1"), # Strip background color
+                           layout.widths = list(ylab.axis.padding = 2)), # ylab distance
+       panel = function(x, y, ...){
+               panel.xyplot(x, y,
+                            type = "l",
+                            lwd = 4,
+                            col = "purple")
+               panel.points(x, y,              # Adding points to the line graph
+                            pch = 19,
+                            col = "purple4",
+                            cex = 1)
+               }
+       )
+```
+
+
+\
+
+##### 2.3 GGplot  
+
+First, I load the `ggplot2` package:
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+I use the same `salary` data set introduced in the `Base R` section above.
+
+**2.3.1 A boxplot:**  
+
+```{r}
+ggplot(data = salary, aes(x = sex, y = salary/1000)) +
+    stat_boxplot(geom = "errorbar", width = 0.5) +
+    geom_boxplot(fill = c("orchid1", "deepskyblue"),
+                 outlier.shape = 21,
+                 outlier.size = 2.5,
+                 width = 0.5) +
+    theme_classic() +
+    theme(axis.text = element_text(size=14),
+          axis.title = element_text(size=14,face="bold")) +
+    theme(axis.title.y = element_text(
+          margin = margin(t = 0, r = 20, b = 0, l = 0))) +
+    theme(axis.title.x = element_text(
+          margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+    labs(title = "Salary vs. Sex",
+         x = "Sex",
+         y = "Salary (thousand USD)") +
+    theme(plot.title = element_text(hjust = 0.5, vjust=2, face = "bold"))
+```
+
+**2.3.2 Another, more complicated boxplot:**  
+I use the `reshape2` package to transform the data from wide to long (tidy) 
+format.
+
+```{r, message=FALSE, warning=FALSE}
+library(reshape2)
+```
+
+```{r, message=FALSE, warning=FALSE}
+factorCols <- c("sex", "degree", "rank")
+salary[factorCols] <- lapply(salary[factorCols], factor)
+
+salaryFactor <- salary %>% select(salary, all_of(factorCols))
+salaryFactor <- melt(salaryFactor, id.var = "salary")
+```
+
+And the plot itself:
+
+```{r}
+ggplot(salaryFactor, aes(y = salary/1000, x = value, group = value)) +
+    stat_boxplot(geom = "errorbar", width = 0.5) +
+    geom_boxplot(fill = c("deepskyblue"), outlier.shape = 21,
+                 outlier.size = 2.5, width = 0.5) +
+    facet_wrap(. ~ variable, scales = "free_x") +
+    theme_bw() +
+    theme(axis.title = element_text(size=14,face="bold")) +
+    theme(axis.title.y = element_text(
+      margin = margin(t = 0, r = 20, b = 0, l = 0))) +
+    theme(axis.title.x = element_text(
+      margin = margin(t = 15, r = 0, b = 0, l = 0))) +
+    labs(title = "Comparing salary within groups of sex, degree, and rank",
+         x = "",
+         y = "Salary (in thousand US$)") +
+    theme(plot.title = element_text(hjust = 0.5, vjust=2.5, face = "bold")) +
+    theme(axis.text.y = element_text(size = 11)) +
+    theme(axis.text.x = element_text(size = 11, angle = 20, vjust = 0.6))
+```
+
+**2.3.3 A histogram:**  
+
+Preparing the data in the correct format:  
+
+```{r}
+histSalaryDat1 <- salary %>% 
+                    select(sex, salary) %>% 
+                      melt(id.var = "salary") %>% 
+                        unite(Groups, c("variable", "value"),
+                              sep = ": ",
+                              remove = TRUE)
+
+histSalaryDat2 <- salary %>% 
+                    select(salary) %>% 
+                      mutate(Groups = "all")
+
+histSalaryDatMerge <- rbind(histSalaryDat1, histSalaryDat2)
+```
+
+Then the plot itself:  
+
+```{r}
+ggplot(data=histSalaryDatMerge, aes(x=salary/1000, col = Groups, fill = Groups)) +
+          geom_histogram(bins = 10, alpha=0.5) +
+          scale_color_brewer(palette="Dark2", direction = -1) +
+          scale_fill_brewer(palette="Dark2", direction = -1) +
+          labs(title="(A) Salary distribution",
+               x="Salary (in thousand USD)",
+               y = "Count")+
+          theme_classic() +
+          theme(legend.position = c(0.89, 1))
+```
+
+**2.3.4 A scatterplot illustrating my fitted linear regression model:**  
+
+In the `Base R` section above, I fitted a linear model (`model1`). Let's look 
+at its coefficients again:
+
+```{r}
+cbind(Coefficients = coef(model1), confint(model1))
+```
+
+
+Preparing the data to be plotted:
+```{r}
+scatterData <- salary %>% select(-rank)
+scatterData <- scatterData %>%
+                unite(Group, c("sex", "degree"), sep = " ", remove = FALSE)
+```
+
+And then the plot itself. The slopes and intercepts are obtained and caculated 
+from the coefficients table above:  
+
+```{r}
+ggplot(data = scatterData, aes(y = salary/1000, x = yearsdeg, col = Group)) +
+          geom_point() +
+          geom_abline(slope=467.72/1000, intercept=15608.20/1000,
+                      col="#F8766D", lwd=1.2) +
+          geom_abline(slope=467.72/1000, intercept=(15608.2036-4030.2259)/1000,
+                      col="#7CAE00", lwd=1.2) +
+          geom_abline(slope=467.72/1000, intercept=(15608.2036+2696.2635)/1000,
+                      col="#00BFC4", lwd=1.2) +
+          geom_abline(slope=467.72/1000, intercept=(15608.2036+2696.2635-4030.2259)/1000,
+                      col="#C77CFF", lwd=1.2) +
+          theme_bw() +
+          theme(axis.title.y = element_text(
+            margin = margin(t = 0, r = 10, b = 0, l = 0))) +
+          theme(axis.title.x = element_text(
+            margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+          labs(title = "Salary ~ Sex + Degree + YearsDegree",
+               x = "Years since highest degree was earned",
+               y = "Salary (in thousand US$)") +
+          theme(plot.title = element_text(hjust = 0.5, face = "bold", size=11))
+```
+
+**2.3.5 A scatterplot illustrating different x-transformations:**  
+
+I use another data set here only for presenting the following graph. The 
+dataset `GPAdata.csv` contains information collected for a simple random sample 
+of recent university graduates. For each individual in the study, we have the 
+initial starting salary (Salary), and the cumulative grade point average (GPA). 
+I would like to examine the relationship between starting salary and grade 
+point average.  
+
+
+Downloading and unzipping the data file [1 Kb]:  
+
+```{r}
+if(!file.exists("DataFiles/GPAdata.csv")){
+    fileURL <- "https://raw.githubusercontent.com/rezahosseinimed/portfolio/main/GPAdata.csv"
+    download.file(fileURL, destfile = "DataFiles/GPAdata.csv", method = "curl")
+    unzip("DataFiles/GPAdata.csv", exdir = "DataFiles/")
+}
+```
+
+Reading the data, plus looking at its structure:
+
+```{r, message=FALSE, warning=FALSE}
+gpa <- read_csv("DataFiles/GPAdata.csv")
+
+str(gpa)
+```
+
+\
+
+Here, I add the polynomial and log transformations of the x variable to the graph:  
+
+```{r, message=FALSE, warning=FALSE}
+ggplot(gpa, aes(x = GPA, y = Salary/1000)) +
+    geom_point() +
+    geom_smooth(method = "lm", fill = "blue") +
+    geom_smooth(method="lm", formula= y ~ x + I(x^2), col = "red", fill = "red") +
+    geom_smooth(method = "lm", formula= y ~ log(x), col = "orange", fill = "orange") +
+    labs(title = "GPA vs Salary", y = "Salary (in thousand $)") +
+    theme_classic() +
+    annotate(geom = "text", x = 3.23, y = 38, label = "Blue line: Salary ~ GPA") +
+    annotate(geom = "text", x = 3.32, y = 35, label = "Red line: Salary ~ GPA + GPA^2") +
+    annotate(geom = "text", x = 3.30, y = 32, label = "Orange line: Salary ~ log(GPA)")
+```
+
+
+\
+
+***
+#### 3. Functions - lexical scoping  
+
+In this section, I write two functions. The overall purpose of these two 
+functions is to make the inverse of a matrix and store it in the cache for 
+further use. The reason for doing this is that some calculations, including 
+finding the inverse of a matrix, can be very resource-consuming in R.  
+\
+
+The concept of R's lexical scoping is necessary here to fully understand how
+things work. The `makeCacheMatrix` function gets a matrix, x, as its input, and
+returns a list of four functions. These four functions are used to `set` and
+`get` the values of the other two objects created within the environment of
+`makeCacheMatrix()`, namely x (as a formal argument, representing the original
+matrix) and i (as a *local* variable, representing the inverse matrix). The
+`makeCacheMatrix()` does not calculate the inverse matrix itself, but allocates
+memory for caching the result of the `cacheSolve` function (description below).  
+\
+
+We can use the double arrow assignment operator (`<<-`) to assign value to an 
+object that is in an environment higher in the hierarchy of R environments. 
+Every function creates its own environment. In the example below, we use the 
+double arrow assignment operator to assign value to the object `i` which is in 
+another environment.
+
+```{r}
+makeCacheMatrix <- function(x = matrix()) {
+  i <- NULL
+  set <- function(y){
+    x <<- y
+    i <<- NULL
+  }
+  get <- function() x
+  set_inverse <- function(inverse) i <<- inverse
+  get_inverse <- function() i
+  list(set = set,
+       get = get,
+       set_inverse = set_inverse,
+       get_inverse = get_inverse)
+}
+```
+
+\
+
+The `cacheSolve` function gets the returned value of the `makeCacheMatrix`
+function as its first formal argument. Then uses the `get_inverse` function
+created within `makeCacheMatrix()` to access the value of i (representing the
+inverse matrix). If a previously calculated inverse matrix has been assigned
+to i, then the `cacheSolve()` gives us a message indicating that it gets the
+cached data and returns the value of i. However, if i is NULL, the
+`cacheSolve()` will get the original matrix from `makeCacheMatrix()`, find the
+inverse matrix, put the result in the `set_inverse` function within
+`makeCacheMatrix()`, and return the inverse matrix.  
+\
+
+Every time we set another matrix using the `set()` function within
+`makeCacheMatrix`, we need to run the `cacheSolve` again to re-calculate and 
+save the inverse matrix in cache.  
+
+```{r}
+cacheSolve <- function(x, ...) {
+  i <- x$get_inverse()
+  if (!is.null(i)) {
+    message("getting cached data")
+    return(i)
+  }
+  data <- x$get()
+  i <- solve(data, ...)
+  x$set_inverse(i)
+  i
+}
+```
+
+##### 3.1 Example  
+
+I make a simple matrix:  
+
+```{r}
+myMatrix <- matrix(1:4, ncol = 2)
+```
+
+I give this matrix to the `makeCacheMatrix` and assign it to the object `test`:  
+
+```{r}
+test <- makeCacheMatrix(myMatrix)
+```
+
+then, the first time that I run the `cacheSolve` function, it only gives me the 
+inverse matrix:  
+
+```{r}
+cacheSolve(test)
+```
+
+The second time that I run the `cacheSolve` function, it gets the answer from 
+the cache and does not recalculate it (**and prints the message "getting cached 
+data"**), hence saving resources.  
+
+```{r}
+cacheSolve(test)
+```
+
+\
+
+***
+#### 4. Loop functions 
+
+##### 4.1 For loop  
+
+`For loops` are most commonly used for iterating over the elements of an object:  
+
+A simple `for loop`:  
+
+```{r}
+a <- c("a", "b", "c", "d")
+
+for (i in seq_along(a)) {
+  print(a[i])
+}
+```
+
+Another:
+
+```{r}
+b <- matrix(1:6, 2, 3)
+
+for (i in seq_len(nrow(b))) {
+  for (j in seq_len(ncol(b))) {
+    print(b[i, j])
+  }
+}
+```
+
+
+##### 4.2 while loop  
+
+In `while loops`, we define a condition. As long as the condition is correct, 
+the loop continues. They are prone to becoming infinite and causing the 
+software to crash, if not written cautiously.  
+
+A simple `while loop`:  
+
+```{r}
+count <- 0
+
+while(count < 10){
+  print(count)
+  count <- count + 1
+}
+```
+
+Another:  
+
+```{r}
+z <- 5
+while(z >= 3 && z <= 10){
+  print(z)
+  coin <- rbinom(1, 1, 0.5)
+  if (coin == 1) {
+    z <- z + 1
+  } else {
+    z <- z - 1
+  }
+}
+```
+
+
+##### 4.3 apply family  
+
+The `apply` family is a group of loop functions that does not require multi-line 
+coding or lots of curly braces. They are easier to use when exploring the data. 
+This family includes these functions: `lapply()`, `sapply()`, `apply()`, 
+`tapply()`, `mapply()`. They are very similar to each other.   
+
+First, I load the `InsectSprays` data set, which is built into R:  
+
+```{r}
+data("InsectSprays")
+head(InsectSprays)
+```
+
+Then, I calculate the sum of insect counts for each spray type only using one 
+function call with `tapply`:  
+
+```{r}
+tapply(InsectSprays$count, INDEX = InsectSprays$spray, FUN = sum)
+```
+
+
+\
+
+***
+#### 5. Regular expressions  
+
+Regular expressions or `regex` are sophisticated commands that can be used to 
+find or replace character strings in a large text vector or data file.  
+
+To show examples of regular expressions, I will work with the following 
+data set [554 Kb]:  
+
+```{r}
+if(!file.exists("DataFiles/homicides.txt")){
+  fileURL <- "https://raw.githubusercontent.com/ahawker/data-analysis-coursera/master/HW4/homicides.txt"
+  download.file(fileURL, destfile = "DataFiles/homicides.txt", method = "curl")
+}
+
+homicides <- readLines("DataFiles/homicides.txt", warn = FALSE)
+```
+
+Exploring the data:  
+
+```{r}
+length(homicides)
+homicides[1]
+homicides[1000]
+```
+
+Using `grep` function, we can get the index number of those values inside 
+`homicide` data set that contain either the words `baltimore` or 
+`November`.
+
+```{r}
+g <- grep("baltimore|November", homicides)
+length(g)
+```
+
+We can also ask for the letter `b` in `baltimore` to be either lower of 
+uppercase:  
+
+```{r}
+i <- grep("[Bb]altimore", homicides)
+length(i)
+```
+
+There is another data set in R called `state.name`, which contains the name of 
+the 50 US states. Using `grep`, we can search for states' names that begin 
+with `New`:  
+
+```{r}
+grep("^New", state.name)
+grep("^New", state.name, value = TRUE)
+```
+
+There are other functions, such as `grepl()`, `regexpr()`, `sub()`, and `gsub()` 
+that do similar things with slight differences and customization.
+
+\
+
+***
+#### 6. Simulations  
+
+For producing random numbers, it is better to specify a `seed`. This way, we 
+can get the exact same random number next time we run the code:
+
+```{r}
+set.seed(3435)
+trainIndicatot <- rbinom(4601, size = 1, prob = 0.5)
+table(trainIndicatot)
+```
+
+
+\
+
+***
+
+#### 7. Linear regression  
+
+
+Again, I work with the `salary` data set from `Base R` section above, to develop 
+a linear regression model investigating the relationship between `sex` and 
+`salary.`  
+
+##### 7.1 Exploratory analysis  
+
+Fisrt, doing some exploratory data analysis:  
+
+```{r}
+dim(salary)
+names(salary)
+head(salary)
+tail(salary)
+```
+\
+
+```{r}
+summary(salary)
+table(salary$sex)
+table(salary$degree)
+table(salary$rank)
+```
+\
+
+Some simple exploratory plots:
+
+```{r, fig.height=7}
+par(mfrow = c(2, 2))
+boxplot(salary$yearsdeg, main = "Years since last degree")
+boxplot(salary$salary, main = "Salary")
+hist(salary$yearsdeg)
+hist(salary$salary)
+```
+\
+
+Plotting a scatterplot and calculating the Pearson correlation:  
+
+```{r}
+plot(salary$yearsdeg, salary$salary)
+cor(salary$yearsdeg, salary$salary, method = "pearson")
+```
+\
+
+Calculating mean salary for males and females separately:  
+
+```{r}
+mean(salary$salary[salary$sex=="male"])
+mean(salary$salary[salary$sex=="female"])
+```
+\
+
+Calculating standard deviation (SD) of salary for males and females separately:  
+
+```{r}
+sd(salary$salary[salary$sex=="male"])
+sd(salary$salary[salary$sex=="female"])
+```
+\
+
+##### 7.2 t-test  
+
+Doing an unadjusted bivariate test (t-test) (as one SD is not more than 
+double the other, I assume equal variances):  
+
+```{r}
+t.test(salary ~ sex, data = salary, var.equal = TRUE)
+```
+\
+
+##### 7.3 Model fitting  
+
+Fitting another linear model (I previously fitted a model 
+called `model1` under `2.1 Base R` section):  
+
+```{r}
+model2 <- lm(salary ~ factor(sex) + yearsdeg, data = salary)
+summary(model2)
+```
+\
+
+Using partial F-test, AIC, and BIC, we can see that model 1 is a better fit:
+
+```{r}
+anova(model1, model2)
+AIC(model1, model2)
+BIC(model1, model2)
+```
+\
+
+I also previously showed the diagnostic plots of `model1` to check linear 
+regression assumptions under `2.1 Base R` section.
+
+\
+
+***
+#### 8. Logistic regression  
+\
+
+##### 8.1 Introducing data  
+
+For this section, I study the relationship between education and the use of 
+contraceptives in Fiji, in the mid 1970s. The dataset that I use is 
+`ContraceptiveUseIndicators.txt`. The data consists of observations on 1607 
+married and fecund women interviewed in the Fiji Fertility Survey of 1975.  
+
+The main research question of interest is to examine the relationship between 
+education and contraceptive use in Fiji in the 1970s, while controlling for 
+other confounding variables. Below is a description of the variables contained 
+in the data set.  
+
+* **Age** = The numeric age  
+* **AgeCat** = Categorized ages: A = “<25”, B=”25-29”, C=”30-39”, D=”40-49”  
+* **Education** = Education categorized as: 0 = “low”, 1 = “high”  
+* **WantsMore** = An indicator if the women wants to have more children: 0 = “no”, 
+1 = “yes”  
+* **UseContraceptive** = An indicator of contraceptive use: 0 = “no”, 1 = “yes”  
+\
+
+##### 8.2 Exploratory analysis  
+
+First, downloading the data:  
+
+```{r}
+if(!file.exists("DataFiles/ContraceptiveUseIndicators.txt")){
+    fileURL <- "https://raw.githubusercontent.com/rezahosseinimed/portfolio/main/ContraceptiveUseIndicators.txt"
+    download.file(fileURL, destfile = "DataFiles/ContraceptiveUseIndicators.txt",
+                  method = "curl")
+}
+```
+
+Reading the data:  
+
+```{r}
+OCP <- read.table("DataFiles/ContraceptiveUseIndicators.txt",
+                  header = TRUE)
+dim(OCP)
+head(OCP)
+str(OCP)
+```
+
+Renaming the values of several variable:  
+
+```{r}
+#### Renaming the values for the AgeCat variable:
+OCP$AgeCat[which(OCP$AgeCat=="A")] <- "<25"
+OCP$AgeCat[which(OCP$AgeCat=="B")] <- "25-29"
+OCP$AgeCat[which(OCP$AgeCat=="C")] <- "30-39"
+OCP$AgeCat[which(OCP$AgeCat=="D")] <- "40-49"
+
+#### Renaming the values for the Education variable:
+OCP$Education[which(OCP$Education=="0")] <- "Low"
+OCP$Education[which(OCP$Education=="1")] <- "High"
+
+#### Renaming the values for the WantsMore variable:
+OCP$WantsMore[which(OCP$WantsMore=="0")] <- "No"
+OCP$WantsMore[which(OCP$WantsMore=="1")] <- "Yes"
+
+#### Renaming the values for the UseContraceptive variable:
+OCP$UseContraceptive[which(OCP$UseContraceptive=="0")] <- "No"
+OCP$UseContraceptive[which(OCP$UseContraceptive=="1")] <- "Yes"
+```
+
+Making these four columns as factor using `lapply` function:  
+
+```{r}
+factorCols <- c("Education", "WantsMore", "AgeCat", "UseContraceptive")
+OCP[factorCols] <- lapply(OCP[factorCols], factor)
+```
+
+Changing the reference level for `Education` variable:  
+
+```{r}
+OCP$Education <- relevel(OCP$Education, "Low")
+```
+
+Comparing `UseContraceptive` against `AgeCat` (I do not show these exploratory 
+analyses for other variables to save space):  
+
+```{r}
+table(OCP$UseContraceptive, OCP$AgeCat)
+mosaicplot(table(OCP$UseContraceptive, OCP$AgeCat),
+           main = "Mosaicplot", xlab = "Contraceptive use", ylab = "Age category")
+chisq.test(OCP$UseContraceptive, OCP$AgeCat)
+```
+\
+
+##### 8.3 Unadjusted OR & χ2 test  
+
+Preparing the data into a table:  
+
+```{r}
+OCPtbl <- table(OCP$Education, OCP$UseContraceptive)
+OCPtbl <- OCPtbl[, c(2, 1)]
+OCPtbl <- OCPtbl[c(2, 1), ]
+OCPtbl
+```
+
+Calculating unadjusted odds ratio (OR) using the `epiR` package:  
+
+```{r, message=FALSE, warning=FALSE}
+library(epiR)
+epi.2by2(OCPtbl, method = "cross.sectional", conf.level = 0.95)
+chisq.test(OCPtbl)
+```
+\
+
+##### 8.4 Adjusted OR  
+
+Calculating adjusted ORs, including interaction terms:  
+
+```{r}
+model3 <- glm(UseContraceptive ~ Education + AgeCat + WantsMore +
+                                 Education:AgeCat + Education:WantsMore,
+              data = OCP, family = "binomial")
+round(exp(cbind(ORs = coef(model3), confint(model3))), 2)
+```
+\
+
+Calculating odds ratios for each stratum of variables `WantsMore` and `AgeCat`, 
+based on the coefficients table below:
+
+```{r}
+summary(model3)$coefficients
+
+#### OR for WantsMore:No - AgeCat:A
+round(exp(-0.11542242), 2)
+
+#### OR for WantsMore:No - AgeCat:B
+round(exp(-0.11542242 - 0.17092490), 2)
+
+#### OR for WantsMore:No - AgeCat:C
+round(exp(-0.11542242 - 0.06069185), 2)
+
+#### OR for WantsMore:No - AgeCat:D
+round(exp(-0.11542242 + 0.99955089), 2)
+
+#### OR for WantsMore:Yes - AgeCat:A
+round(exp(-0.11542242 + 0.74804861), 2)
+
+#### OR for WantsMore:Yes - AgeCat:B
+round(exp(-0.11542242 + 0.74804861 - 0.17092490), 2)
+
+#### OR for WantsMore:Yes - AgeCat:C
+round(exp(-0.11542242 + 0.74804861 - 0.06069185), 2)
+
+#### OR for WantsMore:Yes - AgeCat:D
+round(exp(-0.11542242 + 0.74804861 + 0.99955089), 2)
+```
+
+
+\
+\
+\
+\
+
+***
+<center>**Thank you for reading my report.**</center>
+
+
+```{r, echo=FALSE}
+knitr::knit_exit()
+```
